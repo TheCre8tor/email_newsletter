@@ -6,3 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# We are using the latest beta release of actix-web
+# that relies on tokio 1.x.x
+# There is _some_ turbulence when working with betas,
+# we are pinning a few other supporting packages to ensure
+# compatibility.
+actix-web = "3.3.2"
+actix-http = "2.2.1"
+# tokio = "1.15.0"
