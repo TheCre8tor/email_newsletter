@@ -5,12 +5,26 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+# We could use any path here, but we are following the community convention
+# We could specify a library name using the `name` field. If unspecified,
+# cargo will default to `package.name`, which is what we want.
+path = "src/lib.rs"
+
+# Notice the double square brackets: it's an array in TOML's syntax.
+# We can only have one library in a project, but we can have multiple binaries!
+# If you want to manage multiple libraries in the same repository
+# have a look at the workspace feature - we'll cover it later on.
+[[bin]]
+path = "src/main.rs"
+name = "email_newsletter"
+
 [dependencies]
-# We are using the latest beta release of actix-web
-# that relies on tokio 1.x.x
-# There is _some_ turbulence when working with betas,
-# we are pinning a few other supporting packages to ensure
-# compatibility.
-actix-web = "3.3.2"
-actix-http = "2.2.1"
-# tokio = "1.15.0"
+actix-web = "4.0.0-beta.15"
+actix-http = "3.0.0-beta.16"
+serde = "1.0.132"
+
+[dev-dependencies]
+actix-rt = "2.5.0"
+reqwest = "0.11.7"
+tokio = "1.15.0"
