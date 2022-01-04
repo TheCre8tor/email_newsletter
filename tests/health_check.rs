@@ -3,15 +3,27 @@
 use reqwest::Client;
 use std::net::TcpListener;
 
-use email_newsletter::configuration::get_configuration;
-use sqlx::{Connection, PgConnection};
+use email_newsletter::{configuration::get_configuration, startup};
+use sqlx::{Connection, PgConnection, PgPool};
 
-fn spawn_app() -> String {
+pub struct TestApp {
+    pub address: String,
+    pub db_pool: PgPool,
+}
+
+async fn spawn_app() -> TestApp {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
 
     // We retrieve the port assigned to us by the OS
     let port = listener.local_addr().unwrap().port();
-    let server = email_newsletter::startup::run(listener).expect("Failed to bind address");
+    let address = format!("http://127.0.0.1:{}", port);
+
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let connection_pool = PgPool::connect(&configuration.database.connection_string())
+        .await
+        .expect("Failed to connect to Postgres.");
+
+    let server = startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
     // Launch the server as a background task
     // tokio::spawn returns a handle to the spawned future,
     // but we have no use for it here, hence the non-binding let
@@ -20,8 +32,10 @@ fn spawn_app() -> String {
     // `cargo add tokio --dev --vers 1`
     let _ = tokio::spawn(server);
 
-    // We return the application address to the caller!
-    format!("http://127.0.0.1:{}", port)
+    TestApp {
+        address,
+        db_pool: connection_pool,
+    }
 }
 
 // `actix_rt::test` is the testing equivalent of `actix_web::main`.
