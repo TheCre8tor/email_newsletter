@@ -1,9 +1,9 @@
 //! src/configurations.rs
 
+use config::{Config, ConfigError, File};
 use std::env;
-use config::{ConfigError, Config, File};
 
-use serde::{Deserialize};
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Settings {
@@ -35,6 +35,16 @@ pub fn get_configuration() -> Result<Settings, ConfigError> {
 impl DatabaseSettings {
     pub fn connection_string(&self) -> String {
         // format method interpolate string -->
-        format!("postgres://{}:{}@{}:{}/{}", self.username, self.password, self.host, self.port, self.database_name)
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.username, self.password, self.host, self.port, self.database_name
+        )
+    }
+
+    pub fn connection_string_without_db(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}",
+            self.username, self.password, self.host, self.port
+        )
     }
 }
