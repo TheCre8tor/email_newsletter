@@ -5,6 +5,8 @@ use sqlx::PgPool;
 use chrono::Utc;
 use uuid::Uuid;
 
+use log;
+
 #[derive(Deserialize)]
 pub struct FormData {
     email: String,
@@ -16,6 +18,13 @@ pub async fn subscribe(
     // Retrieving a connection from the application state! -->
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
+    log::info!(
+        "Adding Subscriber -> Name: '{}' Email: '{}' as a new subscriber.",
+        form.email,
+        form.name
+    );
+    log::info!("Saving new subscriber details in the database.");
+
     match sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
@@ -29,9 +38,12 @@ pub async fn subscribe(
     .execute(pool.as_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
-        Err(e) => {
-            println!("Failed to execute query: {}", e);
+        Ok(_) => {
+            log::info!("New subscriber details have been saved");
+            HttpResponse::Ok().finish()
+        }
+        Err(err) => {
+            log::error!("Failed to execute query: {:?}", err);
             HttpResponse::InternalServerError().finish()
         }
     }
