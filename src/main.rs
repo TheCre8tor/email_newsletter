@@ -10,7 +10,7 @@ use std::net::TcpListener;
 #[tokio::main]
 async fn main() -> io::Result<()> {
     /* ------- Telemetry & Logs Config ------- */
-    let subscriber = get_subscriber("email_newsletter".into(), "info".into());
+    let subscriber = get_subscriber("email_newsletter".into(), "info".into(), io::stdout);
     init_subscriber(subscriber);
 
     /* ------- Main App ------- */

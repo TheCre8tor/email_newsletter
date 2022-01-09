@@ -1,12 +1,37 @@
 //! tests/health_check.rs
 
+use email_newsletter::configuration::{get_configuration, DatabaseSettings};
+use email_newsletter::startup;
+use email_newsletter::telemetry::{get_subscriber, init_subscriber};
+use once_cell::sync::Lazy;
 use reqwest::Client;
-use std::net::TcpListener;
-
-use email_newsletter::configuration::DatabaseSettings;
-use email_newsletter::{configuration::get_configuration, startup};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
+use std::io;
+use std::net::TcpListener;
 use uuid::Uuid;
+
+// Ensure that the `tracing` stack is only initialized once using `once_cell`
+static TRACING: Lazy<()> = Lazy::new(|| {
+    /* TO RUN TEST --> */
+    // We are using the `bunyan` CLI to prettify the outputted logs
+    // The original `bunyan` requires NPM, but you can install a Rust-port with
+    // `cargo install bunyan`
+    // TEST_LOG=true cargo test health_check_works | bunyan
+
+    let default_filter_level = "info".to_string();
+    let subscriber_name = "test".to_string();
+
+    // We cannot assign the output of `get_subscriber` to a variable based on the value of `TEST_LOG`
+    // because the sink is part of the type returned by `get_subscriber`, therefore they are not the
+    // same type. We could work around it, but this is the most straight-forward way of moving forward.
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber("test".into(), "debug".into(), io::stdout);
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber("test".into(), "debug".into(), io::sink);
+        init_subscriber(subscriber);
+    }
+});
 
 pub struct TestApp {
     pub address: String,
@@ -14,15 +39,17 @@ pub struct TestApp {
 }
 
 async fn spawn_app() -> TestApp {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
+    // The first time `initialize` is invoked, the code in `TRACING` is executed.
+    // All other invocations will instead skip execution.
+    Lazy::force(&TRACING);
 
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     // We retrieve the port assigned to us by the OS
     let port = listener.local_addr().unwrap().port();
     let address = format!("http://127.0.0.1:{}", port);
 
     let mut configuration = get_configuration().expect("Failed to read configuration.");
     configuration.database.database_name = Uuid::new_v4().to_string();
-
     let connection_pool = configure_database(&configuration.database).await;
 
     let server = startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
