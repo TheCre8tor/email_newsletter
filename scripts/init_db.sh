@@ -2,6 +2,8 @@
 set -x
 set -eo pipefail
 
+# run program with --- sudo SKIP_DOCKER=true ./scripts/init_db.sh
+
 # Check if a custom user has been set, otherwise default to 'postgres'
 DB_USER=${POSTGRES_USER:=postgres}
 # Check if a custom password has been set, otherwise default to 'password'

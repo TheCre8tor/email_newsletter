@@ -1,13 +1,12 @@
+use crate::routes::{health_check, subscribe};
+
 use actix_web::middleware::Logger;
 use actix_web::{dev::Server, web, App, HttpServer};
 use sqlx::PgPool;
 use std::io::Error;
 use std::net::TcpListener;
 
-#[path = "./routes/mod.rs"]
-mod routes;
-
-use routes::{health_check, subscribe};
+use tracing_actix_web::TracingLogger;
 
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, Error> {
     // Wrap the connection in a smart pointer -->
@@ -18,7 +17,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, Error> {
         /* App is where all application logic lives:
         routing, middlewares, request handlers, etc */
         App::new()
-            .wrap(Logger::default())
+            .wrap(TracingLogger::default())
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             // Get a pointer copy and attach it to the application state -->
