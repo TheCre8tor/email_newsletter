@@ -12,13 +12,10 @@ services:
     # Relative to the repository root
     dockerfile_path: Dockerfile
     source_dir: .
-    git:
-      repo_clone_url: https://github.com/TheCre8tor/email_newsletter.git
-      branch: master
     github:
       # Depending on when you created the repository,
       # the default branch on GitHub might have been named `master`
-      branch: master
+      branch: main
       # Deploy a new version on every commit to `main`!
       # Continuous Deployment, here we come!
       deploy_on_push: true
@@ -40,3 +37,30 @@ services:
     # All incoming requests should be routed to our app
     routes:
       - path: /
+    envs:
+      - key: APP_DATABASE__USERNAME
+        scope: RUN_TIME
+        value: ${newsletter.USERNAME}
+      - key: APP_DATABASE__PASSWORD
+        scope: RUN_TIME
+        value: ${newsletter.PASSWORD}
+      - key: APP_DATABASE__HOST
+        scope: RUN_TIME
+        value: ${newsletter.HOSTNAME}
+      - key: APP_DATABASE__PORT
+        scope: RUN_TIME
+        value: ${newsletter.PORT}
+      - key: APP_DATABASE__DATABASE_NAME
+        scope: RUN_TIME
+        value: ${newsletter.DATABASE}
+
+databases:
+  # PG = Postgres
+  - engine: PG
+    # Database name
+    name: newsletter
+    # Again, let's keep all the bill lean
+    num_nodes: 1
+    size: db-s-dev-database
+    # Postgres version - using the latest here
+    version: "12"
