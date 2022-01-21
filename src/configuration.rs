@@ -65,14 +65,14 @@ pub fn get_configuration() -> Result<Settings, ConfigError> {
     let configuration_directory = base_path.join("configuration");
 
     // Read the "default" configuration file
-    settings.merge(File::from(configuration_directory.join("base")).required(true))?;
+    settings.merge(config::File::from(configuration_directory.join("base")).required(true))?;
 
     // Detect the running environment.
     // Default to `local` if unspecified.
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or_else(|_| "local".into())
         .try_into()
-        .expect("Failed to parse APP_ENVIRONMENT");
+        .expect("Failed to parse APP_ENVIRONMENT.");
 
     settings.merge(
         config::File::from(configuration_directory.join(environment.as_str())).required(true),

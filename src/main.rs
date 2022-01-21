@@ -4,10 +4,8 @@ use std::io;
 use email_newsletter::configuration::get_configuration;
 use email_newsletter::startup;
 use email_newsletter::telemetry::{get_subscriber, init_subscriber};
-use sqlx::postgres::{PgPool, PgPoolOptions};
+use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
-
-use secrecy::ExposeSecret;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
