@@ -2,8 +2,9 @@ use actix_web::{web, HttpResponse};
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
-use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
+
+use crate::domain::{NewSubscriber, SubscriberName};
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -27,57 +28,41 @@ pub async fn subscribe(
     // Retrieving a connection from the application state! -->
     pool: web::Data<PgPool>,
 ) -> HttpResponse {
-    if !is_valid_name(&form.name) {
-        return HttpResponse::BadRequest().finish();
-    }
+    // `web::Form` is a wrapper around `FormData`
+    // `form.0` gives us access to the underlying `FormData`
 
-    match insert_subscriber(&pool, &form).await {
+    let valid_name = match SubscriberName::parse(form.0.name) {
+        Ok(name) => name,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+
+    let new_subscriber = NewSubscriber {
+        email: form.0.email,
+        name: valid_name,
+    };
+
+    match insert_subscriber(&pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
-/// Returns `true` if the input satisfies all our validation constraint
-/// on subscriber names, `false` otherwise.
-pub fn is_valid_name(name: &str) -> bool {
-    // `.trim()` returns a view over the input `s` without trailing
-    // whitespace-like characters.
-    // `.is_empty` checks if the view contains any character.
-    let is_empty_or_whitespace = name.trim().is_empty();
-
-    // A grapheme is defined by the Unicode standard as a "user-perceived"
-    // character: `å` is a single grapheme, but it is composed of two characters
-    // (`a` and ``).
-    //
-    // `graphemes` returns an iterator over the graphemes in the input `s`.
-    // `true` specifies that we want to use the extended grapheme definition set,
-    // the recommended one.
-    let is_too_long = name.graphemes(true).count() > 256;
-
-    // Iterate over all characters in the input `s` to check if any of them matches
-    // one of the characters in the forbidden array.
-    let forbidden_characters = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
-    let contains_forbidden_characters = name
-        .chars()
-        .any(|item| forbidden_characters.contains(&item));
-
-    // Return `false` if any of our conditions have been violated
-    !(is_empty_or_whitespace || is_too_long || contains_forbidden_characters)
-}
-
 #[tracing::instrument(
     name = "Saving new subscriber details in the database",
-    skip(form, pool)
+    skip(new_subscriber, pool)
 )]
-async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+async fn insert_subscriber(
+    pool: &PgPool,
+    new_subscriber: &NewSubscriber,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        form.email,
-        form.name,
+        new_subscriber.email,
+        new_subscriber.name.as_ref(),
         Utc::now()
     )
     .execute(pool)
@@ -86,9 +71,10 @@ async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::E
         tracing::error!("Failed to execute query: {:?}", error);
         error
 
-        // Using the `?` operator to return early
-        // if the function failed, returning a sqlx::Error
-        // We will talk about error handling in depth later!
+        // NOTE:
+        /* ? operator triggers and early return using an Err
+        variant, it can only be used within a function that
+        returns a Result.*/
     })?;
 
     Ok(())

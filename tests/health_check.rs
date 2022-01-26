@@ -147,18 +147,18 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 }
 
 #[tokio::test]
-async fn subscribe_returns_a_400_when_data_is_missing() {
+async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
     // Arranged -->
     let app = spawn_app().await;
     let client = reqwest::Client::new();
 
     let test_cases = vec![
-        ("name=le%20guin", "missing the email"),
-        ("email=ursula_le_guin%40gmail.com", "missing the name"),
-        ("", "missing both name and email"),
+        ("name=&email=ursula_le_guin%40gmail.com", "empty name"),
+        ("name=Ursula&email=", "empty email"),
+        ("name=Ursula&email=definitely-not-an-email", "invalid email"),
     ];
 
-    for (invalid_body, error_message) in test_cases {
+    for (invalid_body, description) in test_cases {
         // Act -->
         let response = client
             .post(&format!("{}/subscriptions", &app.address))
@@ -173,8 +173,8 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
             400,
             response.status().as_u16(),
             // Additional customised error massage on test failure
-            "The API did not fail with 400 Bad Request when the payload was {}.",
-            error_message
+            "The API did not return a 400 Bad Request when the payload was {}.",
+            description
         );
     }
 }

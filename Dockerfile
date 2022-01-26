@@ -7,6 +7,11 @@ FROM rust:1.56.0 AS builder
 # exist already.
 WORKDIR /app
 
+# Try for experimentation purpose -->
+#COPY Cargo.lock .
+#COPY Cargo.toml .
+#RUN cargo build --release
+
 # Copy all files from our working environment to our Docker image
 COPY . .
 
