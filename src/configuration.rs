@@ -1,6 +1,6 @@
 //! src/configurations.rs
 
-use config::{Config, ConfigError, File};
+use config::{Config, ConfigError};
 
 use secrecy::ExposeSecret;
 use secrecy::Secret;
