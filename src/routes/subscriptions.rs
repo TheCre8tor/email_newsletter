@@ -4,12 +4,23 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::{NewSubscriber, SubscriberName};
+use crate::domain::{NewSubscriber, SubscriberName, SubscriberEmail};
 
 #[derive(Deserialize)]
 pub struct FormData {
     email: String,
     name: String,
+}
+
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+
+        Ok(Self {email, name})
+    }
 }
 
 /* Notice that we preﬁxed some fields with a % symbol:
@@ -31,14 +42,13 @@ pub async fn subscribe(
     // `web::Form` is a wrapper around `FormData`
     // `form.0` gives us access to the underlying `FormData`
 
-    let valid_name = match SubscriberName::parse(form.0.name) {
-        Ok(name) => name,
+    /* Instead of using NewSubscriber::try_from(form.0) 
+       you can also use form.0.try_into() because our type 
+       automatically gets the corresponding TryInto 
+       implementation, for free. */
+    let new_subscriber = match form.0.try_into() {
+        Ok(subscriber) => subscriber,
         Err(_) => return HttpResponse::BadRequest().finish(),
-    };
-
-    let new_subscriber = NewSubscriber {
-        email: form.0.email,
-        name: valid_name,
     };
 
     match insert_subscriber(&pool, &new_subscriber).await {
@@ -51,7 +61,7 @@ pub async fn subscribe(
     name = "Saving new subscriber details in the database",
     skip(new_subscriber, pool)
 )]
-async fn insert_subscriber(
+async fn insert_subscriber( 
     pool: &PgPool,
     new_subscriber: &NewSubscriber,
 ) -> Result<(), sqlx::Error> {
@@ -61,7 +71,7 @@ async fn insert_subscriber(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        new_subscriber.email,
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now()
     )

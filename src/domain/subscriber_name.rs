@@ -1,9 +1,7 @@
+//! src/domain/subscriber_name.rs
+
 use unicode_segmentation::UnicodeSegmentation;
 
-pub struct NewSubscriber {
-    pub email: String,
-    pub name: SubscriberName,
-}
 // SubscriberName is a turple struct - a new type,
 // with a single (unnamed) field of type String.
 
@@ -16,7 +14,7 @@ pub struct NewSubscriber {
 */
 
 /* NOTE: The inner field of SubscriberName is private to this module,
-it can only be accessed from code within our domain module. */
+it can only be accessed from code within our subscriber_name module. */
 
 #[derive(Debug)]
 pub struct SubscriberName(String);
@@ -60,5 +58,53 @@ impl SubscriberName {
 impl AsRef<str> for SubscriberName {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+// MODULE TEST CASES -->
+
+#[cfg(test)]
+mod test {
+    use claim::{assert_err, assert_ok};
+    use super::SubscriberName;
+
+    #[test]
+    fn a_256_grapheme_long_name_is_valid() {
+        let name = "a".repeat(256);
+        assert_ok!(SubscriberName::parse(name));
+    }
+
+    #[test]
+    fn a_name_longer_than_256_graphemes_is_rejected() {
+        let name = "a".repeat(257);
+        assert_err!(SubscriberName::parse(name));
+    }
+
+    #[test]
+    fn whitespace_only_names_are_rejected() {
+        let name = " ".repeat(256);
+        assert_err!(SubscriberName::parse(name));
+    }
+
+    #[test]
+    fn empty_string_is_rejected() {
+        let name = "".to_string();
+        assert_err!(SubscriberName::parse(name));
+    }
+
+    #[test]
+    fn names_containing_an_invalid_character_are_rejected() {
+        let invalid_chars = &['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
+
+        for char in invalid_chars {
+            let char = char.to_string();
+            assert_err!(SubscriberName::parse(char));
+        }
+    }
+
+    #[test]
+    fn a_valid_name_is_parsed_successfully() {
+        let name = "Ursula Le Guin".to_string();
+        assert_ok!(SubscriberName::parse(name));
     }
 }
