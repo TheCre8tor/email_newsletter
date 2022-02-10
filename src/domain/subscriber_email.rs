@@ -2,7 +2,7 @@
 
 use validator::validate_email;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
@@ -32,11 +32,10 @@ mod tests {
     use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
 
-
     #[test]
     fn empty_string_is_rejected() {
         let email = "".to_string();
-        assert_err!(SubscriberEmail::parse(email));        
+        assert_err!(SubscriberEmail::parse(email));
     }
 
     #[test]

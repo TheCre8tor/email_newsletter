@@ -1,6 +1,7 @@
 //! tests/health_check.rs
 
 use email_newsletter::configuration::{get_configuration, DatabaseSettings};
+use email_newsletter::email_client::EmailClient;
 use email_newsletter::startup;
 use email_newsletter::telemetry::{get_subscriber, init_subscriber};
 use once_cell::sync::Lazy;
@@ -49,7 +50,12 @@ async fn spawn_app() -> TestApp {
     configuration.database.database_name = Uuid::new_v4().to_string();
     let connection_pool = configure_database(&configuration.database).await;
 
-    let server = startup::run(listener, connection_pool.clone()).expect("Failed to bind address");
+    // Build a new email client -->
+    let sender_email = configuration.email_client.sender().expect("Invalid sender email address");
+    let email_client = EmailClient::new(configuration.email_client.base_url, sender_email);
+
+    let server = startup::run(listener, connection_pool.clone(), email_client).expect("Failed to bind address");
+    
     // Launch the server as a background task
     // tokio::spawn returns a handle to the spawned future,
     // but we have no use for it here, hence the non-binding let
